@@ -177,6 +177,31 @@ sudo systemctl status zenoh_joy
 
 ---
 
+## Manual Build & Development (Rust)
+
+If you prefer building and running directly from source:
+
+```bash
+# 1. Clone the repository
+git clone git@github.com:lazytatzv/zenoh_joy_rs.git
+cd zenoh_joy_rs
+
+# 2. Run locally in debug mode
+cargo run -- --config config/zenoh_joy.yaml
+
+# 3. Build optimized standalone release binary (target/release/zenoh_joy_rs)
+cargo build --release
+
+# 4. Install binary globally into ~/.cargo/bin
+cargo install --path .
+
+# 5. Run test suite & code linting
+cargo test
+cargo clippy -- -D warnings
+```
+
+---
+
 ## Documentation & Guides
 
 - [Wi-Fi & Bluetooth Networking Guide](docs/NETWORK_SETUP_GUIDE.md)
