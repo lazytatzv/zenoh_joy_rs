@@ -31,9 +31,9 @@ Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant 
      /joy (sensor_msgs/msg/Joy ready for teleop & navigation)
 ```
 
-- **Zero ROS 2 on Transmitter**: Prebuilt single binary (~10MB) deployed via single-line installer.
+- **Zero ROS 2 on Transmitter**: Prebuilt single binary (~10MB) deployed via unified installer.
 - **Zero Custom Node on Robot**: Uses standard `zenoh-bridge-ros2dds` daemon.
-- **Multi-Link Redundant Failover**: Automatically switches between Wi-Fi and Bluetooth PAN at the Zenoh session layer with zero packet queue lockup (UDP).
+- **Multi-Link Redundant Failover**: Seamless automatic failover between Wi-Fi and Bluetooth PAN (UDP).
 - **Industrial Safety**: Continuous hotplug monitoring with automatic zero-output fail-safe and shutdown E-Stop burst.
 
 ---
@@ -68,13 +68,9 @@ bluetoothctl show | grep "Controller"
 # Output example: Controller AA:BB:CC:DD:EE:FF (public) [default]
 ```
 
-Run the automated Bluetooth server provisioner:
+Run the automated one-line server provisioner:
 ```bash
-# Option A: After colcon build
-ros2 run zenoh_joy_rs setup_bt_pan.sh
-
-# Option B: Run directly via curl (one-liner)
-# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/scripts/setup_bt_pan.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --robot-pan
 ```
 
 #### 3. Launch the Bridge
@@ -139,8 +135,9 @@ ros:
 
 ---
 
-## Service Management (Raspberry Pi)
+## Service Management
 
+### Raspberry Pi (Transmitter)
 ```bash
 # Teleoperation daemon
 sudo systemctl status zenoh_joy
@@ -148,6 +145,12 @@ sudo journalctl -u zenoh_joy -f
 
 # Bluetooth PAN auto-connect client
 sudo systemctl status bt-pan-client
+```
+
+### Robot PC (Receiver)
+```bash
+# Bluetooth PAN access point server
+sudo systemctl status bt-pan-server
 ```
 
 ---

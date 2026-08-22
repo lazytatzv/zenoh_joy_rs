@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# All-In-One Automated Production Installer for zenoh_joy_rs (Raspberry Pi & Linux)
+# Unified All-In-One Production Provisioner for zenoh_joy_rs (Robot PC & RasPi)
 # ==============================================================================
 # Usage:
-#   sudo bash install.sh                              # Standard install (Wi-Fi/LAN)
-#   sudo bash install.sh --bt-robot-mac AA:BB:CC:DD:EE:FF  # Full install + Auto Bluetooth PAN
+#   sudo bash install.sh --robot-pan                     # On Robot PC (Setup Bluetooth PAN Server)
+#   sudo bash install.sh                                 # On RasPi (Standard Teleop Daemon)
+#   sudo bash install.sh --bt-robot-mac AA:BB:CC:DD:EE:FF # On RasPi (Teleop + Bluetooth PAN Client)
 # ==============================================================================
 set -euo pipefail
 
@@ -14,10 +15,15 @@ CONFIG_DIR="/usr/local/etc/zenoh_joy"
 SYSTEMD_DIR="/etc/systemd/system"
 UDEV_DIR="/etc/udev/rules.d"
 ROBOT_BT_MAC=""
+IS_ROBOT_PAN=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
+    --robot-pan)
+      IS_ROBOT_PAN=true
+      shift
+      ;;
     --bt-robot-mac)
       ROBOT_BT_MAC="$2"
       shift 2
@@ -29,7 +35,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "=========================================================="
-echo " Starting zenoh_joy_rs All-In-One Production Deployment"
+echo " Starting zenoh_joy_rs Unified Production Provisioner"
 echo "=========================================================="
 
 # Check root privileges
@@ -37,6 +43,50 @@ if [ "$EUID" -ne 0 ]; then
   echo "[!] Please run with sudo or as root: sudo bash install.sh"
   exit 1
 fi
+
+# ------------------------------------------------------------------------------
+# Mode 1: Robot PC Bluetooth PAN Server Provisioning
+# ------------------------------------------------------------------------------
+if [ "$IS_ROBOT_PAN" = true ]; then
+  echo "[*] Configuring Robot PC as Bluetooth PAN Access Point (NAP)..."
+  apt-get update -qq && apt-get install -y -qq bluez-tools bridge-utils iproute2 > /dev/null
+
+  bt-adapter --set Discoverable 1 || true
+
+  cat << 'SERVICE' > /etc/systemd/system/bt-pan-server.service
+[Unit]
+Description=Bluetooth PAN NAP Server
+After=bluetooth.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/sbin/ip link del pan0
+ExecStartPre=/usr/bin/bt-network -s nap pan0
+ExecStartPost=/usr/bin/sleep 1
+ExecStartPost=/usr/sbin/ip addr add 192.168.44.1/24 dev pan0
+ExecStartPost=/usr/sbin/ip link set pan0 up
+Restart=always
+RestartSec=3s
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+  systemctl daemon-reload
+  systemctl enable --now bt-pan-server.service
+  echo ""
+  echo "=========================================================="
+  echo " Robot PC Bluetooth PAN Server Active!"
+  echo " Server IP       : 192.168.44.1"
+  echo " Service Status  : sudo systemctl status bt-pan-server"
+  echo "=========================================================="
+  exit 0
+fi
+
+# ------------------------------------------------------------------------------
+# Mode 2: Raspberry Pi / Transmitter Teleop Daemon Provisioning
+# ------------------------------------------------------------------------------
 
 # 1. Detect Architecture
 ARCH=$(uname -m)
@@ -95,7 +145,7 @@ cp udev/99-gamepad-teleop.rules "${UDEV_DIR}/"
 udevadm control --reload-rules
 udevadm trigger
 
-# 5. Setup Bluetooth PAN Client if MAC address provided or prompt
+# 5. Setup Bluetooth PAN Client if MAC address provided
 if [ -n "$ROBOT_BT_MAC" ]; then
   echo "[*] Setting up Bluetooth PAN Client connection to Robot ($ROBOT_BT_MAC)..."
   apt-get update -qq && apt-get install -y -qq bluez-tools bridge-utils iproute2 > /dev/null
@@ -122,7 +172,7 @@ SERVICE
 
   systemctl daemon-reload
   systemctl enable --now bt-pan-client.service
-  echo "[+] Bluetooth PAN client service enabled & started (192.168.44.2)!"
+  echo "[+] Bluetooth PAN client service active (192.168.44.2)!"
 fi
 
 # 6. Setup and Enable systemd teleop service

@@ -48,7 +48,7 @@ bluetoothctl show | grep "Controller"
 # Output example: Controller AA:BB:CC:DD:EE:FF
 
 # Enable Bluetooth PAN Server daemon (IP: 192.168.44.1)
-ros2 run zenoh_joy_rs setup_bt_pan.sh
+curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --robot-pan
 ```
 
 ### 2. On Raspberry Pi (Client)
