@@ -6,110 +6,55 @@
 [![Zenoh 1.0](https://img.shields.io/badge/zenoh-1.0.0-purple.svg)](https://zenoh.io)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
-Production-grade, zero-latency teleoperation controller publisher for robotics over Zenoh 1.0.  
-Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant links (Wi-Fi + Bluetooth PAN)** without requiring ROS 2 on the transmitter (Raspberry Pi).
+Zero-latency, fail-safe teleoperation controller publisher for robotics over Zenoh 1.0.  
+Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant links (Wi-Fi + Bluetooth PAN)** with zero ROS 2 footprint on Raspberry Pi.
 
 ---
 
-## Architecture
+## 3-Step Quick Start
 
-```
-[ Transmitter: Raspberry Pi (Linux) ]
-  PS5 DualSense / Gamepad (USB Connected)
-       |
-  [ zenoh_joy_rs ] (Native Rust Standalone Daemon / Zero ROS 2 footprint)
-       |
-       +==================================================================+
-       | Multi-Link Redundant UDP Transport (Automatic Zero-Downtime)     |
-       |  -> Primary Link:   Wi-Fi / Ethernet (udp/192.168.11.100:7447)    |
-       |  -> Secondary Link: Bluetooth PAN (BNEP) (udp/192.168.44.1:7447)  |
-       +==================================================================+
-       v
-[ Receiver: Robot PC (ROS 2) ]
-  [ zenoh-bridge-ros2dds ] (Standard daemon / No custom nodes)
-       v
-     /joy (sensor_msgs/msg/Joy ready for teleop & navigation)
-```
+### 1. Robot PC Setup (ROS 2)
 
-- **Zero ROS 2 on Transmitter**: Prebuilt single binary (~10MB) deployed via unified installer.
-- **Zero Custom Node on Robot**: Uses standard `zenoh-bridge-ros2dds` daemon.
-- **Multi-Link Redundant Failover**: Seamless automatic failover between Wi-Fi and Bluetooth PAN (UDP).
-- **Industrial Safety**: Continuous hotplug monitoring with automatic zero-output fail-safe and shutdown E-Stop burst.
+Add to your robot workspace `.repos` file and build:
 
----
-
-## Step-by-Step Production Setup
-
-### Step 1: Robot PC Setup (ROS 2)
-
-#### 1. Integrate into Robot ROS 2 Workspace via VCS
-Add to your robot `.repos` file:
-```yaml
-repositories:
-  zenoh_joy_rs:
-    type: git
-    url: https://github.com/lazytatzv/zenoh_joy_rs.git
-    version: main
-```
-
-Import, install dependencies, and build:
 ```bash
-cd ~/ros2_ws
+# Add to .repos, import and build
 vcs import src < your_robot.repos
-rosdep install --from-paths src --ignore-src -r -y
 colcon build --packages-select zenoh_joy_rs
 source install/setup.bash
-```
 
-#### 2. Enable Bluetooth PAN Server (Optional for Redundant Link)
-Check Robot Bluetooth MAC address:
-```bash
-bluetoothctl show | grep "Controller"
-# Output example: Controller AA:BB:CC:DD:EE:FF (public) [default]
-```
-
-Run the automated one-line server provisioner:
-```bash
+# (Optional) Enable Bluetooth PAN Server for redundant link:
 curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --robot-pan
-```
 
-#### 3. Launch the Bridge
-```bash
+# Launch the teleop bridge
 ros2 launch zenoh_joy_rs zenoh_teleop.launch.py
 ```
-*(Or run standalone CLI: `zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5`)*
 
 ---
 
-### Step 2: Raspberry Pi Setup (Transmitter)
+### 2. Raspberry Pi Setup (Transmitter)
 
-Connect your PS5 DualSense or gamepad via USB, then run the all-in-one automated installer on Raspberry Pi:
+Plug in your PS5 DualSense / Gamepad via USB, then run the installer on Raspberry Pi:
 
 ```bash
-# Full Installation with Automatic Bluetooth PAN Link Setup:
+# All-In-One automated deployment (Binary + udev + Bluetooth PAN + Systemd):
 curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --bt-robot-mac <ROBOT_BT_MAC>
 
-# Or Standard Installation (Wi-Fi / Ethernet only):
+# (Or standard Wi-Fi only install):
 # curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
 ```
 
-This single command automatically:
-1. Downloads the prebuilt release binary (`/usr/local/bin/zenoh_joy_rs`).
-2. Configures gamepad udev permission rules.
-3. Sets up persistent Bluetooth PAN connection & auto-reconnect service (`bt-pan-client.service`).
-4. Starts and enables the teleop daemon on boot (`zenoh_joy.service`).
-
 ---
 
-### Step 3: Verify Streaming
+### 3. Verify Teleop Topic
 
-On the Robot PC:
+On Robot PC:
 
 ```bash
-# Verify incoming joy topic
+# Check Joy topic
 ros2 topic echo /joy
 
-# Verify streaming rate (100 Hz)
+# Check streaming rate (100 Hz)
 ros2 topic hz /joy
 ```
 
@@ -119,14 +64,14 @@ ros2 topic hz /joy
 
 ```yaml
 device:
-  name_keyword: ""             # Gamepad name substring (e.g. "Wireless Controller", "Xbox"). Empty = auto-detect.
+  name_keyword: ""             # Gamepad name (empty = auto-detect first connected)
   reconnect_interval_ms: 1000  # Reconnect polling interval on disconnect
 
 network:
   send_rate_hz: 100            # Streaming frequency in Hz
   connect_endpoints:
     - "udp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet (Zero-Latency UDP)
-    - "udp/192.168.44.1:7447"   # Secondary: Bluetooth PAN (BNEP)
+    - "udp/192.168.44.1:7447"   # Secondary: Bluetooth PAN (Automatic Failover)
 
 ros:
   topic_name: "joy"            # Target ROS 2 topic (/joy)
@@ -135,45 +80,22 @@ ros:
 
 ---
 
-## Service Management
+## Daemon Management (Raspberry Pi)
 
-### Raspberry Pi (Transmitter)
 ```bash
-# Teleoperation daemon
-sudo systemctl status zenoh_joy
+# View live teleop streaming logs
 sudo journalctl -u zenoh_joy -f
 
-# Bluetooth PAN auto-connect client
-sudo systemctl status bt-pan-client
-```
-
-### Robot PC (Receiver)
-```bash
-# Bluetooth PAN access point server
-sudo systemctl status bt-pan-server
-```
-
----
-
-## Manual Build (Rust)
-
-```bash
-git clone git@github.com:lazytatzv/zenoh_joy_rs.git
-cd zenoh_joy_rs
-
-# Run locally in debug mode
-cargo run -- --config config/zenoh_joy.yaml
-
-# Build standalone release binary
-cargo build --release
+# Check status
+sudo systemctl status zenoh_joy
 ```
 
 ---
 
 ## Documentation & Guides
 
-- [Complete Wi-Fi & Bluetooth Networking Guide](docs/NETWORK_SETUP_GUIDE.md)
-- [Bluetooth PAN Redundant Link Setup Guide](docs/BLUETOOTH_PAN_SETUP.md)
+- [Wi-Fi & Bluetooth Networking Guide](docs/NETWORK_SETUP_GUIDE.md)
+- [Bluetooth PAN Setup Details](docs/BLUETOOTH_PAN_SETUP.md)
 
 ---
 
