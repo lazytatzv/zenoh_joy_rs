@@ -99,13 +99,41 @@ sudo systemctl enable --now zenoh_joy.service
 
 ## Robot Integration (ROS 2)
 
-On the robot PC, run the standard `zenoh-bridge-ros2dds`:
+### 1. Install `zenoh-bridge-ros2dds` on Robot PC
+
+Choose one of the following standard installation methods:
+
+#### Option A: Via ROS 2 APT Repository (Recommended for ROS 2 Humble/Iron/Jazzy)
+```bash
+# Ubuntu / Debian with ROS 2
+sudo apt update
+sudo apt install ros-${ROS_DISTRO}-zenoh-bridge-ros2dds
+```
+
+#### Option B: Via Eclipse Zenoh Debian Repository
+```bash
+echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list.d/zenoh.list
+sudo apt update
+sudo apt install zenoh-bridge-ros2dds
+```
+
+#### Option C: Via Prebuilt Standalone Binary / Cargo
+```bash
+# Direct binary install via cargo
+cargo install zenoh-bridge-ros2dds
+```
+
+---
+
+### 2. Run the Bridge
 
 ```bash
-# Start Zenoh-ROS2 Bridge
-ros2 run zenoh_bridge_ros2dds zenoh_bridge_ros2dds
+# Start Zenoh-ROS2 Bridge (with optional whitelist config)
+zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5
+# or if installed via ROS 2:
+# ros2 run zenoh_bridge_ros2dds zenoh_bridge_ros2dds
 
-# Verify published Joy topic
+# Verify published Joy topic in ROS 2
 ros2 topic echo /joy
 ```
 
