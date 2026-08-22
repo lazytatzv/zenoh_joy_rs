@@ -1,15 +1,18 @@
-# Zenoh Joy Rust Configuration
+# Zenoh Joy Configuration (Multi-Link Redundant Failover)
 device:
-  # Keyword match for controller name (case-insensitive). Leave empty to match any gamepad.
-  name_keyword: ""
-  reconnect_interval_ms: 1000
+  name_keyword: ""             # Match gamepad by name. Leave empty for auto-detection.
+  reconnect_interval_ms: 1000  # Controller reconnect polling interval
 
 network:
-  send_rate_hz: 100
-  # Zenoh Router / Robot End-point. Leave empty for LAN multicast peer discovery.
-  # Or specify e.g. "tcp/192.168.11.100:7447"
-  connect_endpoint: ""
+  send_rate_hz: 100            # Teleoperation loop rate in Hz
+  
+  # Connect Endpoints: Specify multiple links (Wi-Fi, Ethernet, Bluetooth PAN) for automatic failover.
+  # If left empty, LAN multicast auto-discovery is used.
+  connect_endpoints:
+    - ""                       # Auto-discovery
+    # - "tcp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet
+    # - "tcp/192.168.44.2:7447"   # Secondary: Bluetooth PAN (bnep0)
 
 ros:
-  topic_name: "joy"
+  topic_name: "joy"            # Target ROS 2 topic (/joy)
   frame_id: "teleop_joy"

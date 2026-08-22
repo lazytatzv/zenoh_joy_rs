@@ -6,7 +6,7 @@
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
 Production-grade, zero-latency teleoperation controller publisher for robotics and embedded systems.
-Streams CDR-serialized `sensor_msgs/msg/Joy` directly over **Zenoh 1.0** without requiring ROS 2 on the transmitter (e.g., Raspberry Pi).
+Streams CDR-serialized `sensor_msgs/msg/Joy` directly over **Zenoh 1.0** with **seamless multi-link failover (Wi-Fi, Ethernet, Bluetooth PAN)** without requiring ROS 2 on the transmitter (e.g., Raspberry Pi).
 
 ---
 
@@ -21,14 +21,22 @@ Streams CDR-serialized `sensor_msgs/msg/Joy` directly over **Zenoh 1.0** without
   [ zenoh_joy_rs ] (Native Rust Standalone Binary)
        | -- Zero-Copy CDR serialization (Native ROS 2 sensor_msgs/Joy)
        | -- Continuous hotplug detection and recovery
+       | -- Multi-Link Redundancy (Wi-Fi + Ethernet + Bluetooth PAN)
        | -- Watchdog and E-Stop broadcast on shutdown
-       v (Zenoh Protocol 1.0 / Low-Latency UDP/TCP/QUIC)
+       |
+       +======================================================+
+       | Multi-Link Redundant Failover:                       |
+       |  -> Primary:   Wi-Fi / Ethernet (LAN Multicast/TCP)  |
+       |  -> Secondary: Bluetooth PAN (BNEP)                  |
+       +======================================================+
+       v (Zenoh Protocol 1.0 / Low-Latency Routing)
 [ Receiver: Robot Main PC ]
   [ zenoh-bridge-ros2dds ] (Standard daemon)
        |
   /joy (Native ROS 2 Topic available immediately)
 ```
 
+- **Multi-Link Redundant Failover**: Supports simultaneous multi-endpoint routing (e.g., Wi-Fi + Bluetooth PAN). Zenoh seamlessly and automatically routes packets over whichever interface is active.
 - **Zero ROS 2 Footprint on Transmitter**: Builds to a single standalone binary (~8MB). No ROS 2 installation or Python runtime required on Raspberry Pi.
 - **Zero Custom Node on Receiver**: The robot runs standard `zenoh-bridge-ros2dds` daemon; no custom receiver nodes to maintain.
 - **Deterministic and Memory-Safe**: Pure Rust implementation with `tokio` and `evdev`. Zero garbage collection pauses and zero undefined behavior.
@@ -67,12 +75,31 @@ device:
 
 network:
   send_rate_hz: 100            # Streaming frequency in Hz
-  connect_endpoint: ""         # Empty for LAN Multicast auto-discovery, or e.g. "tcp/192.168.11.100:7447"
+
+  # Redundant multi-link endpoints (Wi-Fi, Ethernet, Bluetooth PAN)
+  # Leave empty for LAN Multicast auto-discovery, or list endpoints:
+  connect_endpoints:
+    - "tcp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet
+    - "tcp/192.168.44.2:7447"   # Secondary: Bluetooth PAN (BNEP)
 
 ros:
   topic_name: "joy"            # Target ROS 2 topic name (/joy)
   frame_id: "teleop_joy"       # Header frame_id in sensor_msgs/msg/Joy
 ```
+
+---
+
+## Setting Up Bluetooth PAN for Redundant Link
+
+To use Bluetooth as a transparent fallback link, pair Raspberry Pi and Robot PC with standard Bluetooth Network (PAN):
+
+```bash
+# On Raspberry Pi (Sender)
+sudo bt-network -c <ROBOT_BLUETOOTH_MAC> nap
+# Creates 'bnep0' interface (e.g. 192.168.44.1)
+```
+
+Zenoh handles link switching automatically at the protocol layer.
 
 ---
 
@@ -114,8 +141,6 @@ sudo systemctl enable --now zenoh_joy.service
 
 ### 1. Install `zenoh-bridge-ros2dds` on Robot PC
 
-Choose one of the following standard installation methods:
-
 #### Option A: Via ROS 2 APT Repository (Recommended for ROS 2 Humble/Iron/Jazzy)
 ```bash
 # Ubuntu / Debian with ROS 2
@@ -143,8 +168,6 @@ cargo install zenoh-bridge-ros2dds
 ```bash
 # Start Zenoh-ROS2 Bridge (with optional whitelist config)
 zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5
-# or if installed via ROS 2:
-# ros2 run zenoh_bridge_ros2dds zenoh_bridge_ros2dds
 
 # Verify published Joy topic in ROS 2
 ros2 topic echo /joy

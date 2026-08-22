@@ -1,8 +1,9 @@
-//! Ultra-Robust & Zero-Copy Zenoh Joy Publisher for Raspberry Pi / Linux
-//! ====================================================================
+//! Ultra-Robust & Zero-Copy Zenoh Joy Publisher for Robotics (Multi-Link Redundant)
+//! =================================================================================
 //! - Native Rust implementation with Zenoh 1.0
 //! - Automatic gamepad hotplugging & recovery using pure `evdev`
 //! - Publishes native ROS 2 `sensor_msgs/msg/Joy` (CDR-serialized)
+//! - Multi-Link redundant failover support (Wi-Fi, Ethernet, Bluetooth PAN)
 //! - Automatic Emergency Stop (Zero Joy) broadcast on Ctrl+C / SIGTERM / disconnect
 
 use std::path::PathBuf;
@@ -49,12 +50,15 @@ struct NetworkConfig {
     #[serde(default = "default_rate")]
     send_rate_hz: u64,
     #[serde(default)]
-    connect_endpoint: String,
+    connect_endpoints: Vec<String>,
+    #[serde(default)]
+    connect_endpoint: String, // Backwards compatibility
 }
 impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
             send_rate_hz: 100,
+            connect_endpoints: Vec::new(),
             connect_endpoint: String::new(),
         }
     }
@@ -174,25 +178,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // Aggregate all configured endpoints
+    let mut endpoints = cfg.network.connect_endpoints.clone();
+    if endpoints.is_empty() && !cfg.network.connect_endpoint.is_empty() {
+        endpoints.push(cfg.network.connect_endpoint.clone());
+    }
+    endpoints.retain(|e| !e.trim().is_empty());
+
     // Open Zenoh Session
     let mut z_cfg = ZenohConfig::default();
-    if !cfg.network.connect_endpoint.is_empty() {
+    if !endpoints.is_empty() {
+        let json_arr = serde_json::to_string(&endpoints)?;
         z_cfg
-            .insert_json5(
-                "connect/endpoints",
-                &format!("[\"{}\"]", cfg.network.connect_endpoint),
-            )
-            .map_err(|e| format!("Invalid Zenoh endpoint JSON: {:?}", e))?;
+            .insert_json5("connect/endpoints", &json_arr)
+            .map_err(|e| format!("Invalid Zenoh endpoints JSON: {:?}", e))?;
+        info!("Connecting to redundant Zenoh endpoints: {:?}", endpoints);
+    } else {
+        info!("Opening Zenoh session (Mode: LAN Multicast Auto-Discovery)...");
     }
 
-    info!(
-        "Opening Zenoh session (Endpoint: {})...",
-        if cfg.network.connect_endpoint.is_empty() {
-            "LAN Auto-Discovery"
-        } else {
-            &cfg.network.connect_endpoint
-        }
-    );
     let session = zenoh::open(z_cfg)
         .await
         .map_err(|e| format!("Zenoh open failed: {:?}", e))?;
@@ -203,7 +207,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .declare_publisher(&key_expr)
         .await
         .map_err(|e| format!("Zenoh declare_publisher failed: {:?}", e))?;
-    info!("Zenoh Publisher ready -> '{}'", key_expr);
+    info!("Zenoh Publisher active -> Key: '{}'", key_expr);
 
     // Setup graceful exit handler (E-Stop)
     let running = Arc::new(AtomicBool::new(true));
