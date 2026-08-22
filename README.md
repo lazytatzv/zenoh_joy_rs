@@ -15,12 +15,17 @@ Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant 
 
 ### 1. Robot PC Setup (ROS 2)
 
+Inside your ROS 2 workspace (e.g. `~/ros2_ws`):
+
 ```bash
-# Add to workspace, build, and launch everything in one command:
-vcs import src < your_robot.repos
+# 1. Import repository directly via vcs
+vcs import src --input https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/zenoh_joy.repos
+
+# 2. Install dependencies & build
+rosdep install --from-paths src --ignore-src -r -y
 colcon build --packages-select zenoh_joy_rs && source install/setup.bash
 
-# One-command: Configures Bluetooth PAN Server + Launches Teleop Bridge
+# 3. One-command: Configures Bluetooth PAN Server + Launches Teleop Bridge
 make robot
 ```
 

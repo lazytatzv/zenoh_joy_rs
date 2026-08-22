@@ -1,0 +1,5 @@
+repositories:
+  zenoh_joy_rs:
+    type: git
+    url: https://github.com/lazytatzv/zenoh_joy_rs.git
+    version: main
