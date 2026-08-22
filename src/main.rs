@@ -164,8 +164,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     let cfg: AppConfig = if cli.config.exists() {
-        let content = std::fs::read_to_string(&cli.config)?;
-        serde_yaml::from_str(&content)?
+        match std::fs::read_to_string(&cli.config) {
+            Ok(content) => match serde_yaml::from_str(&content) {
+                Ok(parsed) => parsed,
+                Err(e) => {
+                    error!(
+                        "Failed to parse YAML at {:?}: {}. Falling back to defaults.",
+                        cli.config, e
+                    );
+                    AppConfig {
+                        device: DeviceConfig::default(),
+                        network: NetworkConfig::default(),
+                        ros: RosConfig::default(),
+                    }
+                }
+            },
+            Err(e) => {
+                error!(
+                    "Failed to read config file at {:?}: {}. Falling back to defaults.",
+                    cli.config, e
+                );
+                AppConfig {
+                    device: DeviceConfig::default(),
+                    network: NetworkConfig::default(),
+                    ros: RosConfig::default(),
+                }
+            }
+        }
     } else {
         warn!(
             "Config file not found at {:?}, using default settings",
