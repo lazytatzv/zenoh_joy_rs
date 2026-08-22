@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# One-Line Automated Installer for zenoh_joy_rs (Raspberry Pi & Linux)
+# All-In-One Automated Production Installer for zenoh_joy_rs (Raspberry Pi & Linux)
+# ==============================================================================
+# Usage:
+#   sudo bash install.sh                              # Standard install (Wi-Fi/LAN)
+#   sudo bash install.sh --bt-robot-mac AA:BB:CC:DD:EE:FF  # Full install + Auto Bluetooth PAN
 # ==============================================================================
 set -euo pipefail
 
@@ -9,9 +13,23 @@ INSTALL_BIN_DIR="/usr/local/bin"
 CONFIG_DIR="/usr/local/etc/zenoh_joy"
 SYSTEMD_DIR="/etc/systemd/system"
 UDEV_DIR="/etc/udev/rules.d"
+ROBOT_BT_MAC=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --bt-robot-mac)
+      ROBOT_BT_MAC="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 echo "=========================================================="
-echo " Starting zenoh_joy_rs Automated Production Deployment"
+echo " Starting zenoh_joy_rs All-In-One Production Deployment"
 echo "=========================================================="
 
 # Check root privileges
@@ -77,8 +95,38 @@ cp udev/99-gamepad-teleop.rules "${UDEV_DIR}/"
 udevadm control --reload-rules
 udevadm trigger
 
-# 5. Setup and Enable systemd service
-echo "[*] Setting up systemd auto-start daemon..."
+# 5. Setup Bluetooth PAN Client if MAC address provided or prompt
+if [ -n "$ROBOT_BT_MAC" ]; then
+  echo "[*] Setting up Bluetooth PAN Client connection to Robot ($ROBOT_BT_MAC)..."
+  apt-get update -qq && apt-get install -y -qq bluez-tools bridge-utils iproute2 > /dev/null
+  bluetoothctl trust "$ROBOT_BT_MAC" || true
+
+  cat << SERVICE > /etc/systemd/system/bt-pan-client.service
+[Unit]
+Description=Bluetooth PAN Client Auto-Connect to Robot
+After=bluetooth.target
+Wants=bluetooth.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/bt-network -c ${ROBOT_BT_MAC} nap
+ExecStartPost=/usr/bin/sleep 1
+ExecStartPost=-/usr/sbin/ip addr add 192.168.44.2/24 dev bnep0
+ExecStartPost=/usr/sbin/ip link set bnep0 up
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+  systemctl daemon-reload
+  systemctl enable --now bt-pan-client.service
+  echo "[+] Bluetooth PAN client service enabled & started (192.168.44.2)!"
+fi
+
+# 6. Setup and Enable systemd teleop service
+echo "[*] Setting up systemd teleop auto-start daemon..."
 cp systemd/zenoh_joy.service "${SYSTEMD_DIR}/"
 systemctl daemon-reload
 systemctl enable zenoh_joy.service
@@ -86,9 +134,12 @@ systemctl restart zenoh_joy.service
 
 echo ""
 echo "=========================================================="
-echo " Deployment Complete & Daemon Running!"
+echo " All-In-One Deployment Complete & Services Running!"
 echo "=========================================================="
-echo " Service Status : sudo systemctl status zenoh_joy"
-echo " Live Logs      : sudo journalctl -u zenoh_joy -f"
-echo " Config File    : ${CONFIG_DIR}/zenoh_joy.yaml"
+echo " Teleop Daemon Status : sudo systemctl status zenoh_joy"
+if [ -n "$ROBOT_BT_MAC" ]; then
+echo " Bluetooth PAN Status : sudo systemctl status bt-pan-client"
+fi
+echo " Live Teleop Logs     : sudo journalctl -u zenoh_joy -f"
+echo " Config File          : ${CONFIG_DIR}/zenoh_joy.yaml"
 echo "=========================================================="

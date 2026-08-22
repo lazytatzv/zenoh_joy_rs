@@ -41,10 +41,14 @@ Directly streams CDR-serialized `sensor_msgs/msg/Joy` from Raspberry Pi without 
 
 ### 1. Transmitter Setup (Raspberry Pi)
 
-Install and run as an auto-starting system daemon with a single command:
+Install binary, udev rules, and auto-start system daemon with a single command:
 
 ```bash
+# Standard install (Wi-Fi / Ethernet)
 curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
+
+# OR: Full All-In-One install with automatic Bluetooth PAN link setup:
+# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --bt-robot-mac <ROBOT_BT_MAC>
 ```
 
 To configure target endpoints or streaming rate, edit `/usr/local/etc/zenoh_joy/zenoh_joy.yaml`:
@@ -54,7 +58,7 @@ network:
   send_rate_hz: 100
   connect_endpoints:
     - "udp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet
-    # - "udp/192.168.44.1:7447" # Secondary: Bluetooth PAN (See docs/BLUETOOTH_PAN_SETUP.md)
+    - "udp/192.168.44.1:7447"   # Secondary: Bluetooth PAN (BNEP)
 ```
 
 Manage the service:
