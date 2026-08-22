@@ -1,0 +1,41 @@
+name: Release & Upload Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            binary_name: zenoh_joy_rs-x86_64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-gnu
+            binary_name: zenoh_joy_rs-aarch64-unknown-linux-gnu
+          - target: armv7-unknown-linux-gnueabihf
+            binary_name: zenoh_joy_rs-armv7-unknown-linux-gnueabihf
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: taiki-e/install-action@cross
+      - name: Build Release Binary
+        run: cross build --target ${{ matrix.target }} --release
+      - name: Prepare Binary Artifact
+        run: |
+          cp target/${{ matrix.target }}/release/zenoh_joy_rs ${{ matrix.binary_name }}
+          chmod +x ${{ matrix.binary_name }}
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.binary_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
