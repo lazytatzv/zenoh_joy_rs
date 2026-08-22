@@ -1,53 +1,46 @@
 # Automated Bluetooth PAN Setup Guide
 
-You can fully automate Bluetooth PAN configuration and auto-reconnect systemd services with the included setup script:
+This guide walks you through setting up a redundant Bluetooth Personal Area Network (PAN) link between Raspberry Pi and Robot PC.
 
 ---
 
 ## 1. Robot PC Setup (Server: 192.168.44.1)
 
-Run this once on the Robot PC:
+#### Option A: Via ROS 2 Package Command (Recommended)
+After building the workspace with `colcon build`:
+```bash
+ros2 run zenoh_joy_rs setup_bt_pan.sh server
+```
 
+#### Option B: Standalone Script Execution
 ```bash
 sudo bash scripts/setup_bt_pan.sh server
 ```
+
+This creates the `pan0` interface with IP `192.168.44.1` and enables the `bt-pan-server.service` system daemon.
 
 ---
 
 ## 2. Raspberry Pi Setup (Client: 192.168.44.2)
 
-Run this on Raspberry Pi with your Robot PC's Bluetooth MAC:
-
+#### Option A: Automated via All-In-One Installer (Recommended)
+Pass the Robot PC Bluetooth MAC address directly to `install.sh`:
 ```bash
-sudo bash scripts/setup_bt_pan.sh client <ROBOT_BLUETOOTH_MAC>
+curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --bt-robot-mac <ROBOT_BT_MAC>
 ```
 
-This automatically configures the network adapter, sets up persistent auto-reconnection via systemd, and brings up the `bnep0` interface.
+#### Option B: Standalone Client Script
+```bash
+sudo bash scripts/setup_bt_pan.sh client <ROBOT_BT_MAC>
+```
+
+This pairs with the Robot PC, configures the `bnep0` interface with IP `192.168.44.2`, and enables persistent auto-reconnection on boot (`bt-pan-client.service`).
 
 ---
 
-## 3. Persistent Auto-Connect on Boot (Systemd)
+## 3. Verify Connection
 
-Create `/etc/systemd/system/bt-pan-client.service` on Raspberry Pi:
-
-```ini
-[Unit]
-Description=Bluetooth PAN Client Auto-Connect
-After=bluetooth.target
-
-[Service]
-Type=forking
-ExecStart=/usr/bin/bt-network -c <ROBOT_BT_MAC> nap
-ExecStartPost=/usr/sbin/ip addr add 192.168.44.2/24 dev bnep0
-ExecStartPost=/usr/sbin/ip link set bnep0 up
-Restart=always
-RestartSec=5s
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable the service:
+From Raspberry Pi:
 ```bash
-sudo systemctl enable --now bt-pan-client.service
+ping -c 3 192.168.44.1
 ```
