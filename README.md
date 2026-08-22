@@ -167,6 +167,13 @@ cargo build --release
 
 ---
 
+## Documentation & Guides
+
+- [Complete Wi-Fi & Bluetooth Networking Guide](docs/NETWORK_SETUP_GUIDE.md)
+- [Bluetooth PAN Redundant Link Setup Guide](docs/BLUETOOTH_PAN_SETUP.md)
+
+---
+
 ## License
 
 MIT License. Free for open-source and commercial robotics applications.
