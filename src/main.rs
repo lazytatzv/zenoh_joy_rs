@@ -40,7 +40,9 @@ struct DeviceConfig {
     #[serde(default = "default_reconnect_ms")]
     reconnect_interval_ms: u64,
 }
-fn default_reconnect_ms() -> u64 { 1000 }
+fn default_reconnect_ms() -> u64 {
+    1000
+}
 
 #[derive(Debug, Deserialize, Clone)]
 struct NetworkConfig {
@@ -51,10 +53,15 @@ struct NetworkConfig {
 }
 impl Default for NetworkConfig {
     fn default() -> Self {
-        Self { send_rate_hz: 100, connect_endpoint: String::new() }
+        Self {
+            send_rate_hz: 100,
+            connect_endpoint: String::new(),
+        }
     }
 }
-fn default_rate() -> u64 { 100 }
+fn default_rate() -> u64 {
+    100
+}
 
 #[derive(Debug, Deserialize, Clone)]
 struct RosConfig {
@@ -65,11 +72,18 @@ struct RosConfig {
 }
 impl Default for RosConfig {
     fn default() -> Self {
-        Self { topic_name: "joy".into(), frame_id: "teleop_joy".into() }
+        Self {
+            topic_name: "joy".into(),
+            frame_id: "teleop_joy".into(),
+        }
     }
 }
-fn default_topic() -> String { "joy".into() }
-fn default_frame() -> String { "teleop_joy".into() }
+fn default_topic() -> String {
+    "joy".into()
+}
+fn default_frame() -> String {
+    "teleop_joy".into()
+}
 
 /// ROS 2 sensor_msgs/msg/Joy definition matching standard CDR layout
 #[derive(Debug, Clone, Serialize)]
@@ -106,7 +120,9 @@ impl RosJoyMsg {
 }
 
 fn now_stamp() -> (i32, u32) {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     (now.as_secs() as i32, now.subsec_nanos())
 }
 
@@ -126,7 +142,11 @@ fn find_gamepad(name_keyword: &str) -> Option<evdev::Device> {
         if caps.is_some() && abs.is_some() {
             let name = dev.name().unwrap_or_default().to_lowercase();
             if kw.is_empty() || name.contains(&kw) {
-                info!("Found Gamepad: '{}' at {:?}", dev.name().unwrap_or_default(), dev.physical_path());
+                info!(
+                    "Found Gamepad: '{}' at {:?}",
+                    dev.name().unwrap_or_default(),
+                    dev.physical_path()
+                );
                 return Some(dev);
             }
         }
@@ -143,7 +163,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(&cli.config)?;
         serde_yaml::from_str(&content)?
     } else {
-        warn!("Config file not found at {:?}, using default settings", cli.config);
+        warn!(
+            "Config file not found at {:?}, using default settings",
+            cli.config
+        );
         AppConfig {
             device: DeviceConfig::default(),
             network: NetworkConfig::default(),
@@ -154,16 +177,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Open Zenoh Session
     let mut z_cfg = ZenohConfig::default();
     if !cfg.network.connect_endpoint.is_empty() {
-        z_cfg.insert_json5("connect/endpoints", &format!("[\"{}\"]", cfg.network.connect_endpoint))
+        z_cfg
+            .insert_json5(
+                "connect/endpoints",
+                &format!("[\"{}\"]", cfg.network.connect_endpoint),
+            )
             .map_err(|e| format!("Invalid Zenoh endpoint JSON: {:?}", e))?;
     }
 
-    info!("Opening Zenoh session (Endpoint: {})...", if cfg.network.connect_endpoint.is_empty() { "LAN Auto-Discovery" } else { &cfg.network.connect_endpoint });
-    let session = zenoh::open(z_cfg).await.map_err(|e| format!("Zenoh open failed: {:?}", e))?;
+    info!(
+        "Opening Zenoh session (Endpoint: {})...",
+        if cfg.network.connect_endpoint.is_empty() {
+            "LAN Auto-Discovery"
+        } else {
+            &cfg.network.connect_endpoint
+        }
+    );
+    let session = zenoh::open(z_cfg)
+        .await
+        .map_err(|e| format!("Zenoh open failed: {:?}", e))?;
 
     let topic = cfg.ros.topic_name.trim_start_matches('/');
     let key_expr = format!("rt/{}", topic);
-    let publisher = session.declare_publisher(&key_expr).await.map_err(|e| format!("Zenoh declare_publisher failed: {:?}", e))?;
+    let publisher = session
+        .declare_publisher(&key_expr)
+        .await
+        .map_err(|e| format!("Zenoh declare_publisher failed: {:?}", e))?;
     info!("Zenoh Publisher ready -> '{}'", key_expr);
 
     // Setup graceful exit handler (E-Stop)
@@ -181,7 +220,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut axes = vec![0.0f32; 8];
     let mut buttons = vec![0i32; 14];
 
-    info!("Starting ultra-low latency teleop loop at {} Hz...", cfg.network.send_rate_hz);
+    info!(
+        "Starting ultra-low latency teleop loop at {} Hz...",
+        cfg.network.send_rate_hz
+    );
 
     while running.load(Ordering::SeqCst) {
         let mut device = match find_gamepad(&cfg.device.name_keyword) {
@@ -211,19 +253,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             EventType::KEY => {
                                 let pressed = if ev.value() != 0 { 1 } else { 0 };
                                 match Key::new(ev.code()) {
-                                    Key::BTN_SOUTH => buttons[0] = pressed, // Cross / A
-                                    Key::BTN_EAST => buttons[1] = pressed,  // Circle / B
-                                    Key::BTN_NORTH => buttons[2] = pressed, // Triangle / Y
-                                    Key::BTN_WEST => buttons[3] = pressed,  // Square / X
-                                    Key::BTN_TL => buttons[4] = pressed,    // L1
-                                    Key::BTN_TR => buttons[5] = pressed,    // R1
-                                    Key::BTN_TL2 => buttons[6] = pressed,   // L2 (digital)
-                                    Key::BTN_TR2 => buttons[7] = pressed,   // R2 (digital)
-                                    Key::BTN_SELECT => buttons[8] = pressed,// Select / Share
-                                    Key::BTN_START => buttons[9] = pressed, // Start / Option
-                                    Key::BTN_MODE => buttons[10] = pressed, // PS / Guide
-                                    Key::BTN_THUMBL => buttons[11] = pressed,// L3
-                                    Key::BTN_THUMBR => buttons[12] = pressed,// R3
+                                    Key::BTN_SOUTH => buttons[0] = pressed,   // Cross / A
+                                    Key::BTN_EAST => buttons[1] = pressed,    // Circle / B
+                                    Key::BTN_NORTH => buttons[2] = pressed,   // Triangle / Y
+                                    Key::BTN_WEST => buttons[3] = pressed,    // Square / X
+                                    Key::BTN_TL => buttons[4] = pressed,      // L1
+                                    Key::BTN_TR => buttons[5] = pressed,      // R1
+                                    Key::BTN_TL2 => buttons[6] = pressed,     // L2 (digital)
+                                    Key::BTN_TR2 => buttons[7] = pressed,     // R2 (digital)
+                                    Key::BTN_SELECT => buttons[8] = pressed,  // Select / Share
+                                    Key::BTN_START => buttons[9] = pressed,   // Start / Option
+                                    Key::BTN_MODE => buttons[10] = pressed,   // PS / Guide
+                                    Key::BTN_THUMBL => buttons[11] = pressed, // L3
+                                    Key::BTN_THUMBR => buttons[12] = pressed, // R3
                                     Key::BTN_TOUCH | Key::BTN_LEFT => buttons[13] = pressed, // Touchpad / Left click
                                     _ => {}
                                 }
