@@ -1,18 +1,43 @@
-# Zenoh Joy Configuration (Multi-Link Redundant Failover)
+# ==============================================================================
+# zenoh_joy_rs Production Configuration File
+# ==============================================================================
+
+# Gamepad Input Device Settings
 device:
-  name_keyword: ""             # Match gamepad by name. Leave empty for auto-detection.
-  reconnect_interval_ms: 1000  # Controller reconnect polling interval
+  # Search keyword in gamepad name (case-insensitive substring match).
+  # Examples:
+  #   - "Wireless Controller" (Sony DualSense / DualShock 4)
+  #   - "Xbox"                (Microsoft Xbox One / Series Controller)
+  #   - "Logitech"            (Logitech F710 / F310)
+  # Leave empty ("") to automatically match the first available gamepad.
+  name_keyword: ""
 
+  # Reconnect polling interval (in milliseconds) when the controller is unplugged.
+  reconnect_interval_ms: 1000
+
+# Teleoperation & Networking Settings
 network:
-  send_rate_hz: 100            # Teleoperation loop rate in Hz
-  
-  # Connect Endpoints: Specify multiple links (Wi-Fi, Ethernet, Bluetooth PAN) for automatic failover.
-  # If left empty, LAN multicast auto-discovery is used.
-  connect_endpoints:
-    - ""                       # Auto-discovery
-    # - "tcp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet
-    # - "tcp/192.168.44.2:7447"   # Secondary: Bluetooth PAN (bnep0)
+  # Periodic streaming frequency in Hz (typically 50 to 200 Hz).
+  send_rate_hz: 100
 
+  # Multi-Link Redundant Endpoints:
+  # List all reachable robot network interfaces (Wi-Fi, Ethernet, Bluetooth PAN).
+  # Zenoh will maintain sessions and automatically route traffic across active links.
+  #
+  # Option A: Automatic LAN Multicast Discovery (Leave empty)
+  # connect_endpoints: []
+  #
+  # Option B: Explicit Redundant Failover (Recommended for production)
+  connect_endpoints:
+    - "tcp/192.168.11.100:7447" # Primary Link: Wi-Fi / Ethernet
+    # - "tcp/192.168.44.1:7447" # Secondary Link: Bluetooth PAN (BNEP)
+    # - "quic/192.168.11.100:7447" # High-Speed Low-Latency QUIC transport
+
+# ROS 2 Topic Settings
 ros:
-  topic_name: "joy"            # Target ROS 2 topic (/joy)
+  # Target ROS 2 topic name (without leading slash).
+  # Resulting Zenoh key expression will be: "rt/<topic_name>"
+  topic_name: "joy"
+
+  # Frame ID placed inside sensor_msgs/msg/Joy header.
   frame_id: "teleop_joy"

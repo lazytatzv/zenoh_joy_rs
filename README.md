@@ -91,15 +91,16 @@ ros:
 
 ## Setting Up Bluetooth PAN for Redundant Link
 
-To use Bluetooth as a transparent fallback link, pair Raspberry Pi and Robot PC with standard Bluetooth Network (PAN):
+To use Bluetooth as a transparent fallback link alongside Wi-Fi, configure a standard Bluetooth Personal Area Network (PAN).
+See the complete step-by-step guide: [docs/BLUETOOTH_PAN_SETUP.md](docs/BLUETOOTH_PAN_SETUP.md)
 
 ```bash
 # On Raspberry Pi (Sender)
 sudo bt-network -c <ROBOT_BLUETOOTH_MAC> nap
-# Creates 'bnep0' interface (e.g. 192.168.44.1)
+# Creates 'bnep0' interface (e.g. 192.168.44.2)
 ```
 
-Zenoh handles link switching automatically at the protocol layer.
+Zenoh automatically manages multi-link health and failover at the session layer without dropping ROS 2 messages.
 
 ---
 
