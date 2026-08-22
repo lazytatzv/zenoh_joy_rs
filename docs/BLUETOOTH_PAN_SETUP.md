@@ -1,51 +1,28 @@
-# Bluetooth PAN (Personal Area Network) Setup Guide
+# Automated Bluetooth PAN Setup Guide
 
-This guide walks you through configuring a redundant Bluetooth link (`bnep0`) between Raspberry Pi and Robot PC.
+You can fully automate Bluetooth PAN configuration and auto-reconnect systemd services with the included setup script:
 
 ---
 
-## 1. Robot PC (PAN Access Point / Server)
+## 1. Robot PC Setup (Server: 192.168.44.1)
 
-Run this once on the Robot PC to allow incoming Bluetooth network connections:
+Run this once on the Robot PC:
 
 ```bash
-# 1. Install bridge & network tools
-sudo apt install -y bluez-tools bridge-utils
-
-# 2. Configure Bluetooth daemon for Network Access Point (NAP)
-sudo bt-adapter --set Discoverable 1
-
-# 3. Start PAN server on Robot PC (assigns IP 192.168.44.1)
-sudo bt-network -s nap pan0 &
-sudo ip addr add 192.168.44.1/24 dev pan0
-sudo ip link set pan0 up
+sudo bash scripts/setup_bt_pan.sh server
 ```
 
 ---
 
-## 2. Raspberry Pi (PAN Client / Sender)
+## 2. Raspberry Pi Setup (Client: 192.168.44.2)
 
-Connect Raspberry Pi to the Robot PC over Bluetooth:
+Run this on Raspberry Pi with your Robot PC's Bluetooth MAC:
 
 ```bash
-# 1. Pair with Robot PC (replace with Robot PC Bluetooth MAC)
-bluetoothctl
-# Inside bluetoothctl:
-# scan on
-# pair <ROBOT_BT_MAC>
-# trust <ROBOT_BT_MAC>
-# exit
-
-# 2. Connect to PAN network
-sudo bt-network -c <ROBOT_BT_MAC> nap
-
-# 3. Assign client IP (192.168.44.2)
-sudo ip addr add 192.168.44.2/24 dev bnep0
-sudo ip link set bnep0 up
-
-# 4. Verify connectivity
-ping -c 3 192.168.44.1
+sudo bash scripts/setup_bt_pan.sh client <ROBOT_BLUETOOTH_MAC>
 ```
+
+This automatically configures the network adapter, sets up persistent auto-reconnection via systemd, and brings up the `bnep0` interface.
 
 ---
 
