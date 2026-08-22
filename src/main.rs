@@ -185,30 +185,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     endpoints.retain(|e| !e.trim().is_empty());
 
-    // Open Zenoh Session
-    let mut z_cfg = ZenohConfig::default();
-    if !endpoints.is_empty() {
-        let json_arr = serde_json::to_string(&endpoints)?;
-        z_cfg
-            .insert_json5("connect/endpoints", &json_arr)
-            .map_err(|e| format!("Invalid Zenoh endpoints JSON: {:?}", e))?;
-        info!("Connecting to redundant Zenoh endpoints: {:?}", endpoints);
-    } else {
-        info!("Opening Zenoh session (Mode: LAN Multicast Auto-Discovery)...");
-    }
-
-    let session = zenoh::open(z_cfg)
-        .await
-        .map_err(|e| format!("Zenoh open failed: {:?}", e))?;
-
-    let topic = cfg.ros.topic_name.trim_start_matches('/');
-    let key_expr = format!("rt/{}", topic);
-    let publisher = session
-        .declare_publisher(&key_expr)
-        .await
-        .map_err(|e| format!("Zenoh declare_publisher failed: {:?}", e))?;
-    info!("Zenoh Publisher active -> Key: '{}'", key_expr);
-
     // Setup graceful exit handler (E-Stop)
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -217,6 +193,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         warn!("Shutdown signal received! Emitting Emergency Stop...");
         r.store(false, Ordering::SeqCst);
     });
+
+    let topic = cfg.ros.topic_name.trim_start_matches('/');
+    let key_expr = format!("rt/{}", topic);
+
+    // Open Zenoh Session with continuous retry resilience (never crash on network startup)
+    let (session, publisher) = loop {
+        if !running.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        let mut z_cfg = ZenohConfig::default();
+        if !endpoints.is_empty() {
+            if let Ok(json_arr) = serde_json::to_string(&endpoints) {
+                if let Err(e) = z_cfg.insert_json5("connect/endpoints", &json_arr) {
+                    warn!("Invalid Zenoh endpoints JSON (retrying): {:?}", e);
+                }
+            }
+            info!("Connecting to Zenoh endpoints: {:?}", endpoints);
+        } else {
+            info!("Opening Zenoh session (LAN Multicast Auto-Discovery)...");
+        }
+
+        match zenoh::open(z_cfg).await {
+            Ok(sess) => match sess.declare_publisher(&key_expr).await {
+                Ok(publ) => {
+                    info!("Zenoh Publisher active -> Key: '{}'", key_expr);
+                    break (sess, publ);
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to declare Zenoh publisher: {:?}. Retrying in 2s...",
+                        e
+                    );
+                }
+            },
+            Err(e) => {
+                error!(
+                    "Failed to initialize Zenoh session: {:?}. Retrying in 2s...",
+                    e
+                );
+            }
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+    };
 
     let rate = Duration::from_micros(1_000_000 / cfg.network.send_rate_hz.max(1));
     let mut interval = tokio::time::interval(rate);
