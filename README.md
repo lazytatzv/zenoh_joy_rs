@@ -78,13 +78,26 @@ ros:
 
 ## Production Deployment (Raspberry Pi)
 
-### 1. Gamepad Device Permissions (udev)
+### One-Line Automated Deployment (Recommended)
+
+Run this single command on Raspberry Pi to automatically install the binary, udev rules, and start the systemd daemon:
+
+```bash
+# Automated install & auto-start daemon
+curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
+```
+
+---
+
+### Manual Deployment
+
+#### 1. Gamepad Device Permissions (udev)
 ```bash
 sudo cp udev/99-gamepad-teleop.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-### 2. Auto-Start Service (systemd)
+#### 2. Auto-Start Service (systemd)
 ```bash
 sudo mkdir -p /usr/local/etc/zenoh_joy
 sudo cp target/release/zenoh_joy_rs /usr/local/bin/
