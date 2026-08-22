@@ -1,33 +1,34 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Automated Bluetooth PAN Setup & Systemd Auto-Connect Daemon Provisioner
+# Automated Bluetooth PAN Provisioner (Robot PC Server / RasPi Client)
 # Usage:
-#   sudo bash scripts/setup_bt_pan.sh server              # On Robot PC (Server: 192.168.44.1)
-#   sudo bash scripts/setup_bt_pan.sh client <ROBOT_MAC> # On RasPi (Client: 192.168.44.2)
+#   sudo bash scripts/setup_bt_pan.sh                     # On Robot PC (Auto Server: 192.168.44.1)
+#   sudo bash scripts/setup_bt_pan.sh server              # On Robot PC (Explicit Server: 192.168.44.1)
+#   sudo bash scripts/setup_bt_pan.sh <ROBOT_BT_MAC>      # On RasPi (Auto Client: 192.168.44.2)
+#   sudo bash scripts/setup_bt_pan.sh client <ROBOT_MAC> # On RasPi (Explicit Client: 192.168.44.2)
 # ==============================================================================
 set -euo pipefail
 
-ROLE="${1:-}"
-ROBOT_MAC="${2:-}"
+ARG1="${1:-}"
+ARG2="${2:-}"
 
 if [ "$EUID" -ne 0 ]; then
-  echo "[!] Please run with sudo: sudo bash scripts/setup_bt_pan.sh [server|client <MAC>]"
+  echo "[!] Please run with sudo: sudo bash scripts/setup_bt_pan.sh [<ROBOT_BT_MAC>]"
   exit 1
 fi
 
-# Ensure bluez and networking tools are installed
 apt-get update -qq && apt-get install -y -qq bluez-tools bridge-utils iproute2 > /dev/null
 
-if [ "$ROLE" == "server" ]; then
+# Determine Server vs Client
+if [ -z "$ARG1" ] || [ "$ARG1" == "server" ]; then
+  # Configure as Robot PC PAN Server (192.168.44.1)
   echo "=========================================================="
   echo " Configuring Robot PC as Bluetooth PAN Access Point (NAP)"
   echo " IP Address: 192.168.44.1/24"
   echo "=========================================================="
 
-  # Enable Bluetooth discoverable
   bt-adapter --set Discoverable 1 || true
 
-  # Setup systemd service for PAN NAP server
   cat << 'SERVICE' > /etc/systemd/system/bt-pan-server.service
 [Unit]
 Description=Bluetooth PAN NAP Server
@@ -50,12 +51,18 @@ SERVICE
 
   systemctl daemon-reload
   systemctl enable --now bt-pan-server.service
-  echo "[+] Bluetooth PAN Server successfully configured and running on Robot PC (192.168.44.1)!"
+  echo "[+] Bluetooth PAN Server active on Robot PC (192.168.44.1)!"
 
-elif [ "$ROLE" == "client" ]; then
+else
+  # Configure as RasPi PAN Client (192.168.44.2)
+  ROBOT_MAC="$ARG1"
+  if [ "$ARG1" == "client" ]; then
+    ROBOT_MAC="$ARG2"
+  fi
+
   if [ -z "$ROBOT_MAC" ]; then
     echo "[!] Error: Missing Robot PC Bluetooth MAC address."
-    echo "    Usage: sudo bash scripts/setup_bt_pan.sh client AA:BB:CC:DD:EE:FF"
+    echo "    Usage: sudo bash scripts/setup_bt_pan.sh <ROBOT_BT_MAC>"
     exit 1
   fi
 
@@ -65,10 +72,8 @@ elif [ "$ROLE" == "client" ]; then
   echo " IP Address: 192.168.44.2/24"
   echo "=========================================================="
 
-  # Trust device
   bluetoothctl trust "$ROBOT_MAC" || true
 
-  # Setup systemd client service with auto-reconnect
   cat << SERVICE > /etc/systemd/system/bt-pan-client.service
 [Unit]
 Description=Bluetooth PAN Client Auto-Connect to Robot
@@ -90,12 +95,5 @@ SERVICE
 
   systemctl daemon-reload
   systemctl enable --now bt-pan-client.service
-  echo "[+] Bluetooth PAN Client successfully configured on Raspberry Pi (192.168.44.2)!"
-
-else
-  echo "[!] Invalid argument."
-  echo "Usage:"
-  echo "  Robot PC (Server): sudo bash scripts/setup_bt_pan.sh server"
-  echo "  RasPi (Client)   : sudo bash scripts/setup_bt_pan.sh client <ROBOT_BT_MAC>"
-  exit 1
+  echo "[+] Bluetooth PAN Client active on Raspberry Pi (192.168.44.2)!"
 fi

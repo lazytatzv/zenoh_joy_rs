@@ -68,13 +68,13 @@ bluetoothctl show | grep "Controller"
 # Output example: Controller AA:BB:CC:DD:EE:FF (public) [default]
 ```
 
-Run the automated server provisioner:
+Run the automated Bluetooth server provisioner:
 ```bash
 # Option A: After colcon build
-ros2 run zenoh_joy_rs setup_bt_pan.sh server
+ros2 run zenoh_joy_rs setup_bt_pan.sh
 
 # Option B: Run directly via curl (one-liner)
-# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/scripts/setup_bt_pan.sh | sudo bash -s -- server
+# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/scripts/setup_bt_pan.sh | sudo bash
 ```
 
 #### 3. Launch the Bridge
