@@ -1,6 +1,6 @@
 [package]
 name = "zenoh_joy_rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["tatsv <tatsv@users.noreply.github.com>"]
 description = "Production-grade, zero-latency teleoperation controller publisher for robotics over Zenoh 1.0"
