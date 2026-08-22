@@ -15,18 +15,20 @@ Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant 
 
 ### 1. Robot PC Setup (ROS 2)
 
-Inside your ROS 2 workspace (e.g. `~/ros2_ws`):
+Add to your robot workspace `.repos` file (or see [examples/zenoh_joy.repos](examples/zenoh_joy.repos)):
+
+```yaml
+repositories:
+  zenoh_joy_rs:
+    type: git
+    url: https://github.com/lazytatzv/zenoh_joy_rs.git
+    version: main
+```
+
+Import, build, and launch inside your ROS 2 workspace (e.g. `~/ros2_ws`):
 
 ```bash
-# Import repository directly via vcs:
-vcs import src --input https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/zenoh_joy.repos
-# (Or add to your .repos file):
-#   zenoh_joy_rs:
-#     type: git
-#     url: https://github.com/lazytatzv/zenoh_joy_rs.git
-#     version: main
-
-# Install dependencies & build
+vcs import src < your_robot.repos
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --packages-select zenoh_joy_rs && source install/setup.bash
 
