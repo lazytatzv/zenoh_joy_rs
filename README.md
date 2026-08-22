@@ -204,6 +204,7 @@ cargo clippy -- -D warnings
 
 ## Documentation & Guides
 
+- [Manual Build & Custom Setup Guide](docs/MANUAL_SETUP_GUIDE.md)
 - [Wi-Fi & Bluetooth Networking Guide](docs/NETWORK_SETUP_GUIDE.md)
 - [Bluetooth PAN Setup Details](docs/BLUETOOTH_PAN_SETUP.md)
 
