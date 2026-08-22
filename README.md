@@ -1,80 +1,61 @@
 # zenoh_joy_rs
 
 [![CI](https://github.com/lazytatzv/zenoh_joy_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/lazytatzv/zenoh_joy_rs/actions)
+[![Release](https://img.shields.io/github/v/release/lazytatzv/zenoh_joy_rs)](https://github.com/lazytatzv/zenoh_joy_rs/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zenoh 1.0](https://img.shields.io/badge/zenoh-1.0.0-purple.svg)](https://zenoh.io)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
 Production-grade, zero-latency teleoperation controller publisher for robotics over Zenoh 1.0.  
-Directly streams CDR-serialized `sensor_msgs/msg/Joy` from Raspberry Pi without installing ROS 2 on the transmitter.
+Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant links (Wi-Fi + Bluetooth PAN)** without requiring ROS 2 on the transmitter (Raspberry Pi).
 
 ---
 
-## Overview
+## Architecture
 
 ```
 [ Transmitter: Raspberry Pi (Linux) ]
-  Gamepad (DualSense / Xbox / Custom HID)
+  PS5 DualSense / Gamepad (USB Connected)
        |
-  [ zenoh_joy_rs ] (Native Rust Single-Binary / No ROS 2 needed)
+  [ zenoh_joy_rs ] (Native Rust Standalone Daemon / Zero ROS 2 footprint)
        |
-       +======================================================+
-       | Multi-Link Redundant UDP Transport                   |
-       |  -> Primary:   Wi-Fi / Ethernet                      |
-       |  -> Secondary: Bluetooth PAN (BNEP)                  |
-       +======================================================+
-       v (Automatic Zero-Downtime Failover)
+       +==================================================================+
+       | Multi-Link Redundant UDP Transport (Automatic Zero-Downtime)     |
+       |  -> Primary Link:   Wi-Fi / Ethernet (udp/192.168.11.100:7447)    |
+       |  -> Secondary Link: Bluetooth PAN (BNEP) (udp/192.168.44.1:7447)  |
+       +==================================================================+
+       v
 [ Receiver: Robot PC (ROS 2) ]
   [ zenoh-bridge-ros2dds ] (Standard daemon / No custom nodes)
        v
-     /joy (sensor_msgs/msg/Joy ready for navigation & control)
+     /joy (sensor_msgs/msg/Joy ready for teleop & navigation)
 ```
 
-- **Zero ROS 2 on Transmitter**: Single standalone binary (~8MB) on Raspberry Pi.
+- **Zero ROS 2 on Transmitter**: Prebuilt single binary (~10MB) deployed via single-line installer.
 - **Zero Custom Node on Robot**: Uses standard `zenoh-bridge-ros2dds` daemon.
-- **Multi-Link Redundancy**: Seamless automatic failover between Wi-Fi and Bluetooth PAN.
-- **Fail-Safe & E-Stop**: Auto-zeros joy output on disconnect and emits emergency stop packets on shutdown.
+- **Multi-Link Redundant Failover**: Automatically switches between Wi-Fi and Bluetooth PAN at the Zenoh session layer with zero packet queue lockup (UDP).
+- **Industrial Safety**: Continuous hotplug monitoring with automatic zero-output fail-safe and shutdown E-Stop burst.
 
 ---
 
-## Quick Usage
+## Step-by-Step Production Setup
 
-### 1. Transmitter Setup (Raspberry Pi)
+### Step 1: Robot PC Setup (ROS 2)
 
-Install binary, udev rules, and auto-start system daemon with a single command:
-
+#### 1. Enable Bluetooth PAN Server (Optional for Redundant Link)
+Check Robot Bluetooth MAC address:
 ```bash
-# Standard install (Wi-Fi / Ethernet)
-curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
-
-# OR: Full All-In-One install with automatic Bluetooth PAN link setup:
-# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --bt-robot-mac <ROBOT_BT_MAC>
+bluetoothctl show | grep "Controller"
+# Output example: Controller AA:BB:CC:DD:EE:FF (public) [default]
 ```
 
-To configure target endpoints or streaming rate, edit `/usr/local/etc/zenoh_joy/zenoh_joy.yaml`:
-
-```yaml
-network:
-  send_rate_hz: 100
-  connect_endpoints:
-    - "udp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet
-    - "udp/192.168.44.1:7447"   # Secondary: Bluetooth PAN (BNEP)
-```
-
-Manage the service:
+Run the automated server provisioner:
 ```bash
-sudo systemctl status zenoh_joy    # Check status
-sudo journalctl -u zenoh_joy -f    # View live logs
+sudo bash scripts/setup_bt_pan.sh server
 ```
 
----
-
-### 2. Robot PC Setup (ROS 2)
-
-#### Option A: Integrate via VCS / colcon (Recommended)
-
+#### 2. Integrate into Robot ROS 2 Workspace via VCS
 Add to your robot `.repos` file:
-
 ```yaml
 repositories:
   zenoh_joy_rs:
@@ -83,39 +64,49 @@ repositories:
     version: main
 ```
 
-Import and build inside your ROS 2 workspace:
-
+Import, install dependencies, and build:
 ```bash
 cd ~/ros2_ws
-vcs import src < robot.repos
+vcs import src < your_robot.repos
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --packages-select zenoh_joy_rs
 source install/setup.bash
 ```
 
-Launch the bridge:
+#### 3. Launch the Bridge
 ```bash
 ros2 launch zenoh_joy_rs zenoh_teleop.launch.py
 ```
-
-#### Option B: Standalone CLI (Without building)
-
-Install `zenoh-bridge-ros2dds`:
-```bash
-sudo apt install ros-${ROS_DISTRO}-zenoh-bridge-ros2dds
-```
-
-Run bridge directly:
-```bash
-zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5
-```
+*(Or run standalone CLI: `zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5`)*
 
 ---
 
-### 3. Verify Joy Topic
+### Step 2: Raspberry Pi Setup (Transmitter)
+
+Connect your PS5 DualSense or gamepad via USB, then run the all-in-one automated installer on Raspberry Pi:
 
 ```bash
-# Echo incoming teleop joy data
+# Full Installation with Automatic Bluetooth PAN Link Setup:
+curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --bt-robot-mac <ROBOT_BT_MAC>
+
+# Or Standard Installation (Wi-Fi / Ethernet only):
+# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
+```
+
+This single command automatically:
+1. Downloads the prebuilt release binary (`/usr/local/bin/zenoh_joy_rs`).
+2. Configures gamepad udev permission rules.
+3. Sets up persistent Bluetooth PAN connection & auto-reconnect service (`bt-pan-client.service`).
+4. Starts and enables the teleop daemon on boot (`zenoh_joy.service`).
+
+---
+
+### Step 3: Verify Streaming
+
+On the Robot PC:
+
+```bash
+# Verify incoming joy topic
 ros2 topic echo /joy
 
 # Verify streaming rate (100 Hz)
@@ -124,24 +115,41 @@ ros2 topic hz /joy
 
 ---
 
-## Installation & Build Options
+## Configuration (`/usr/local/etc/zenoh_joy/zenoh_joy.yaml`)
 
-### Option A: One-Line Production Daemon (Raspberry Pi)
-Installs binary, udev gamepad permissions, and auto-starts background systemd daemon:
-```bash
-curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
+```yaml
+device:
+  name_keyword: ""             # Gamepad name substring (e.g. "Wireless Controller", "Xbox"). Empty = auto-detect.
+  reconnect_interval_ms: 1000  # Reconnect polling interval on disconnect
+
+network:
+  send_rate_hz: 100            # Streaming frequency in Hz
+  connect_endpoints:
+    - "udp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet (Zero-Latency UDP)
+    - "udp/192.168.44.1:7447"   # Secondary: Bluetooth PAN (BNEP)
+
+ros:
+  topic_name: "joy"            # Target ROS 2 topic (/joy)
+  frame_id: "teleop_joy"       # Header frame_id in sensor_msgs/msg/Joy
 ```
 
-### Option B: Via Cargo (Development / Desktop Testing)
-```bash
-# Install globally into ~/.cargo/bin
-cargo install zenoh_joy_rs
+---
 
-# Run CLI directly
-zenoh_joy_rs --config /path/to/zenoh_joy.yaml
+## Service Management (Raspberry Pi)
+
+```bash
+# Teleoperation daemon
+sudo systemctl status zenoh_joy
+sudo journalctl -u zenoh_joy -f
+
+# Bluetooth PAN auto-connect client
+sudo systemctl status bt-pan-client
 ```
 
-### Option C: Build from Source
+---
+
+## Manual Build (Rust)
+
 ```bash
 git clone git@github.com:lazytatzv/zenoh_joy_rs.git
 cd zenoh_joy_rs
@@ -149,15 +157,9 @@ cd zenoh_joy_rs
 # Run locally in debug mode
 cargo run -- --config config/zenoh_joy.yaml
 
-# Build optimized release binary (target/release/zenoh_joy_rs)
+# Build standalone release binary
 cargo build --release
 ```
-
----
-
-## Documentation
-
-- [Bluetooth PAN Redundant Link Setup Guide](docs/BLUETOOTH_PAN_SETUP.md)
 
 ---
 
