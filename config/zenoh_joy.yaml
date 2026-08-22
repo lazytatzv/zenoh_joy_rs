@@ -22,16 +22,18 @@ network:
 
   # Multi-Link Redundant Endpoints:
   # List all reachable robot network interfaces (Wi-Fi, Ethernet, Bluetooth PAN).
-  # Zenoh will maintain sessions and automatically route traffic across active links.
+  #
+  # NOTE: UDP ('udp/') is strongly recommended for real-time teleoperation to
+  # prevent Head-of-Line blocking, buffer bloat, and burst delay spikes during packet drops.
   #
   # Option A: Automatic LAN Multicast Discovery (Leave empty)
   # connect_endpoints: []
   #
-  # Option B: Explicit Redundant Failover (Recommended for production)
+  # Option B: Explicit Redundant Failover with UDP (Recommended for real-time robotics)
   connect_endpoints:
-    - "tcp/192.168.11.100:7447" # Primary Link: Wi-Fi / Ethernet
-    # - "tcp/192.168.44.1:7447" # Secondary Link: Bluetooth PAN (BNEP)
-    # - "quic/192.168.11.100:7447" # High-Speed Low-Latency QUIC transport
+    - "udp/192.168.11.100:7447" # Primary Link: Wi-Fi / Ethernet (Zero-Latency UDP)
+    # - "udp/192.168.44.1:7447" # Secondary Link: Bluetooth PAN (UDP)
+    # - "tcp/192.168.11.100:7447" # Fallback TCP transport if UDP is blocked by firewall
 
 # ROS 2 Topic Settings
 ros:

@@ -77,10 +77,11 @@ network:
   send_rate_hz: 100            # Streaming frequency in Hz
 
   # Redundant multi-link endpoints (Wi-Fi, Ethernet, Bluetooth PAN)
+  # UDP ('udp/') is strongly recommended for real-time teleoperation to eliminate latency spikes.
   # Leave empty for LAN Multicast auto-discovery, or list endpoints:
   connect_endpoints:
-    - "tcp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet
-    - "tcp/192.168.44.2:7447"   # Secondary: Bluetooth PAN (BNEP)
+    - "udp/192.168.11.100:7447" # Primary: Wi-Fi / Ethernet (Zero-Latency UDP)
+    - "udp/192.168.44.2:7447"   # Secondary: Bluetooth PAN (BNEP)
 
 ros:
   topic_name: "joy"            # Target ROS 2 topic name (/joy)
