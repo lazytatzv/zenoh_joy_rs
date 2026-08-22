@@ -87,9 +87,58 @@ The raw hardware events are mapped directly into standard ROS 2 Joy indices matc
 
 ---
 
-### Integrating with `teleop_twist_joy` (Robot Driving)
+## ROS 2 Launch Usage & Integration
 
-To drive your robot with standard velocity commands (`geometry_msgs/msg/Twist`), launch standard `teleop_twist_joy`:
+### 1. Launching from CLI
+
+Launch with default configuration (`examples/ros2_zenoh_bridge.json5`):
+```bash
+ros2 launch zenoh_joy_rs zenoh_teleop.launch.py
+```
+
+Pass a custom bridge configuration file via launch argument:
+```bash
+ros2 launch zenoh_joy_rs zenoh_teleop.launch.py zenoh_config:=/path/to/custom_bridge.json5
+```
+
+---
+
+### 2. Embedding inside your Robot Launch File
+
+To launch the Zenoh teleop bridge automatically alongside your robot navigation or motor drivers, include it in your master `robot.launch.py`:
+
+```python
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+
+def generate_launch_description():
+    zenoh_teleop_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare("zenoh_joy_rs"),
+                "examples",
+                "launch",
+                "zenoh_teleop.launch.py"
+            ])
+        ]),
+        # Optional: override config file
+        # launch_arguments={"zenoh_config": "/path/to/custom.json5"}.items()
+    )
+
+    return LaunchDescription([
+        zenoh_teleop_launch,
+        # ... your other robot nodes (navigation, lidar, teleop_twist_joy) ...
+    ])
+```
+
+---
+
+### 3. Driving Robot with `teleop_twist_joy`
+
+Convert incoming `/joy` to `/cmd_vel` (`geometry_msgs/msg/Twist`) velocity commands:
 
 ```bash
 ros2 run teleop_twist_joy teleop_node --ros-args -r joy:=/joy
