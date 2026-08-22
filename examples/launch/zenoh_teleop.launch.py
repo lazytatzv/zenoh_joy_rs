@@ -1,17 +1,17 @@
 """
-Example ROS 2 Launch File for Robot Integration
-Starts standard zenoh-bridge-ros2dds with teleoperation configuration.
+Production ROS 2 Launch File for Zenoh Teleop Bridge
+Works out of the box with standard 'ros2 launch zenoh_joy_rs zenoh_teleop.launch.py'
 """
 
-from pathlib import Path
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
-    pkg_dir = Path(__file__).resolve().parent.parent
-    default_config = str(pkg_dir / "ros2_zenoh_bridge.json5")
+    pkg_share = FindPackageShare("zenoh_joy_rs")
+    default_config = PathJoinSubstitution([pkg_share, "examples", "ros2_zenoh_bridge.json5"])
 
     config_arg = DeclareLaunchArgument(
         "zenoh_config",

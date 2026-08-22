@@ -141,42 +141,42 @@ sudo systemctl enable --now zenoh_joy.service
 
 ## Robot Integration (ROS 2)
 
-### 1. Install `zenoh-bridge-ros2dds` on Robot PC
+### 1. Integrate into Robot ROS 2 Workspace (via VCS)
 
-#### Option A: Via ROS 2 APT Repository (Recommended for ROS 2 Humble/Iron/Jazzy)
-```bash
-# Ubuntu / Debian with ROS 2
-sudo apt update
-sudo apt install ros-${ROS_DISTRO}-zenoh-bridge-ros2dds
+Add this repo to your robot workspace `.repos` file:
+
+```yaml
+repositories:
+  zenoh_joy_rs:
+    type: git
+    url: https://github.com/lazytatzv/zenoh_joy_rs.git
+    version: main
 ```
 
-#### Option B: Via Eclipse Zenoh Debian Repository
-```bash
-echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list.d/zenoh.list
-sudo apt update
-sudo apt install zenoh-bridge-ros2dds
-```
+Import and build inside your ROS 2 workspace (e.g. `colcon_ws`):
 
-#### Option C: Via Prebuilt Standalone Binary / Cargo
 ```bash
-# Direct binary install via cargo
-cargo install zenoh-bridge-ros2dds
+cd ~/ros2_ws
+vcs import src < your_robot.repos
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --packages-select zenoh_joy_rs
+source install/setup.bash
 ```
 
 ---
 
-### 2. Run the Bridge (CLI or ROS 2 Launch)
+### 2. Run the Bridge (Direct or Standard ROS 2 Launch)
 
-#### Method A: Direct CLI Execution
+#### Method A: Standard ROS 2 Package Launch (After `colcon build`)
+```bash
+# Launch directly via ROS 2 package system
+ros2 launch zenoh_joy_rs zenoh_teleop.launch.py
+```
+
+#### Method B: Direct CLI Execution (Without building)
 ```bash
 # Start Zenoh-ROS2 Bridge using the provided whitelist configuration
 zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5
-```
-
-#### Method B: Include in ROS 2 Launch File
-You can launch the bridge directly from your robot's launch stack:
-```bash
-ros2 launch examples/launch/zenoh_teleop.launch.py
 ```
 
 Or embed it inside your own `.launch.py`:
