@@ -2,6 +2,23 @@
 name = "zenoh_joy_rs"
 version = "0.1.0"
 edition = "2021"
+authors = ["tatsv <tatsv@users.noreply.github.com>"]
+description = "Production-grade, zero-latency teleoperation controller publisher for robotics over Zenoh 1.0"
+license = "MIT"
+repository = "https://github.com/lazytatzv/zenoh_joy_rs"
+homepage = "https://github.com/lazytatzv/zenoh_joy_rs"
+documentation = "https://github.com/lazytatzv/zenoh_joy_rs"
+readme = "README.md"
+keywords = ["zenoh", "ros2", "teleop", "gamepad", "robotics"]
+categories = ["command-line-utilities", "hardware-support"]
+exclude = [
+    ".github/",
+    "systemd/",
+    "udev/",
+    "examples/",
+    "install.sh",
+    "Makefile"
+]
 
 [dependencies]
 zenoh = "1.0.0"
