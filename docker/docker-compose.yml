@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  zenoh_bridge:
+    image: eclipse/zenoh-bridge-ros2dds:latest
+    network_mode: "host"
+    restart: unless-stopped
+    command: ["-c", "/etc/zenoh/ros2_zenoh_bridge.json5"]
+    volumes:
+      - ../examples/ros2_zenoh_bridge.json5:/etc/zenoh/ros2_zenoh_bridge.json5:ro
+
+  zenoh_joy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    network_mode: "host"
+    restart: unless-stopped
+    devices:
+      - "/dev/input:/dev/input:ro"
+    volumes:
+      - ../config/zenoh_joy.yaml:/usr/local/etc/zenoh_joy/zenoh_joy.yaml:ro
