@@ -16,30 +16,26 @@ Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant 
 ### 1. Robot PC Setup (ROS 2)
 
 ```bash
-# Add to .repos, import and build
+# Add to workspace, build, and launch everything in one command:
 vcs import src < your_robot.repos
-colcon build --packages-select zenoh_joy_rs
-source install/setup.bash
+colcon build --packages-select zenoh_joy_rs && source install/setup.bash
 
-# (Optional) Enable Bluetooth PAN Server:
-make robot-pan
-
-# Launch the teleop bridge
-make launch
+# One-command: Configures Bluetooth PAN Server + Launches Teleop Bridge
+make robot
 ```
 
 ---
 
-### 2. Raspberry Pi Setup (Transmitter)
+### 2. Raspberry Pi Setup (Transmitter / Client)
 
 Plug in your PS5 DualSense / Gamepad via USB, then run on Raspberry Pi:
 
 ```bash
-# Remote one-liner install with Bluetooth PAN:
+# Remote one-command deployment:
 curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --bt-robot-mac <ROBOT_BT_MAC>
 
-# Or if repository is cloned locally:
-# make raspi-install ROBOT_BT_MAC=<ROBOT_BT_MAC>
+# Or if cloned locally:
+# make raspi ROBOT_BT_MAC=<ROBOT_BT_MAC>
 ```
 
 ---
