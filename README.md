@@ -120,15 +120,32 @@ ros2 topic hz /joy
 
 ---
 
-## Manual Build (Rust)
+## Installation & Build Options
 
+### Option A: One-Line Production Daemon (Raspberry Pi)
+Installs binary, udev gamepad permissions, and auto-starts background systemd daemon:
 ```bash
-# Clone & run locally in debug mode
+curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
+```
+
+### Option B: Via Cargo (Development / Desktop Testing)
+```bash
+# Install globally into ~/.cargo/bin
+cargo install zenoh_joy_rs
+
+# Run CLI directly
+zenoh_joy_rs --config /path/to/zenoh_joy.yaml
+```
+
+### Option C: Build from Source
+```bash
 git clone git@github.com:lazytatzv/zenoh_joy_rs.git
 cd zenoh_joy_rs
+
+# Run locally in debug mode
 cargo run -- --config config/zenoh_joy.yaml
 
-# Build standalone release binary
+# Build optimized release binary (target/release/zenoh_joy_rs)
 cargo build --release
 ```
 
