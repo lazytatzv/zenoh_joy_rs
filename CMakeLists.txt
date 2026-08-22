@@ -7,15 +7,11 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 
-# Install Launch, Config, and Examples into standard ROS 2 share directory
+# Install standard ROS 2 directories
 install(DIRECTORY
+  launch
   config
   examples
-  DESTINATION share/${PROJECT_NAME}
-)
-
-install(DIRECTORY
-  examples/launch
   DESTINATION share/${PROJECT_NAME}
 )
 

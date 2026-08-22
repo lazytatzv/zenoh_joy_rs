@@ -119,7 +119,6 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
                 FindPackageShare("zenoh_joy_rs"),
-                "examples",
                 "launch",
                 "zenoh_teleop.launch.py"
             ])
