@@ -62,6 +62,41 @@ make echo
 
 ---
 
+## Complete Usage & Teleop Mapping
+
+### Button & Axis Index Mapping (Standard ROS 2 `sensor_msgs/msg/Joy`)
+
+The raw hardware events are mapped directly into standard ROS 2 Joy indices matching `joy_linux` and DualSense/Xbox standard layout:
+
+| Array Index | Axes (`msg.axes[i]`) | Buttons (`msg.buttons[i]`) |
+| :---: | :--- | :--- |
+| **0** | Left Stick X `[-1.0 (left), 1.0 (right)]` | Cross / A (`0` or `1`) |
+| **1** | Left Stick Y `[-1.0 (down), 1.0 (up)]` | Circle / B (`0` or `1`) |
+| **2** | L2 Trigger (Analog) `[-1.0, 1.0]` | Triangle / Y (`0` or `1`) |
+| **3** | Right Stick X `[-1.0 (left), 1.0 (right)]` | Square / X (`0` or `1`) |
+| **4** | Right Stick Y `[-1.0 (down), 1.0 (up)]` | L1 Bumper (`0` or `1`) |
+| **5** | R2 Trigger (Analog) `[-1.0, 1.0]` | R1 Bumper (`0` or `1`) |
+| **6** | D-Pad X (Hat) `[-1.0 (left), 1.0 (right)]` | L2 Trigger (Digital) (`0` or `1`) |
+| **7** | D-Pad Y (Hat) `[-1.0 (down), 1.0 (up)]` | R2 Trigger (Digital) (`0` or `1`) |
+| **8** | — | Select / Share / Create (`0` or `1`) |
+| **9** | — | Start / Options (`0` or `1`) |
+| **10** | — | PS / Xbox / Guide (`0` or `1`) |
+| **11** | — | L3 (Left Stick Click) (`0` or `1`) |
+| **12** | — | R3 (Right Stick Click) (`0` or `1`) |
+| **13** | — | Touchpad Click (`0` or `1`) |
+
+---
+
+### Integrating with `teleop_twist_joy` (Robot Driving)
+
+To drive your robot with standard velocity commands (`geometry_msgs/msg/Twist`), launch standard `teleop_twist_joy`:
+
+```bash
+ros2 run teleop_twist_joy teleop_node --ros-args -r joy:=/joy
+```
+
+---
+
 ## Configuration (`/usr/local/etc/zenoh_joy/zenoh_joy.yaml`)
 
 ```yaml
