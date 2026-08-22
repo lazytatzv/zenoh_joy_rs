@@ -1,0 +1,4 @@
+# DualSense / DualShock / Xbox Gamepad Permission Rules
+KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="*Wireless Controller*", MODE="0660", GROUP="input"
+KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="*Xbox*", MODE="0660", GROUP="input"
+KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="*DualSense*", MODE="0660", GROUP="input"

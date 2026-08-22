@@ -1,0 +1,19 @@
+[Unit]
+Description=Zenoh Joy Native Teleop Publisher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/etc/zenoh_joy
+ExecStart=/usr/local/bin/zenoh_joy_rs --config /usr/local/etc/zenoh_joy/zenoh_joy.yaml
+Restart=always
+RestartSec=2s
+# Hardening
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+// zenoh-bridge-ros2dds Configuration Example for Robot PC
+{
+  plugins: {
+    ros2dds: {
+      nodename: "zenoh_bridge_teleop",
+      // Allow only /joy to reduce bandwidth & prevent clutter
+      allow: ["joy", "/joy", "teleop_joy"],
+    }
+  }
+}

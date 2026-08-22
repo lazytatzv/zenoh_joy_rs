@@ -1,33 +1,130 @@
-# zenoh_joy_rs (Rust Native Teleop Publisher)
+# zenoh_joy_rs
 
-Raspberry Pi上で動作する、**超低遅延・高信頼・メモリ安全なZenohコントローラー送信機**です。
+[![CI](https://github.com/lazytatzv/zenoh_joy_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/lazytatzv/zenoh_joy_rs/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Zenoh 1.0](https://img.shields.io/badge/zenoh-1.0.0-purple.svg)](https://zenoh.io)
+[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
----
-
-## 🌟 特徴
-
-1. **シングルバイナリ・超軽量:**
-   - ビルドすると `zenoh_joy_rs` 単一の実行ファイルになり、RasPi側にランタイムや外部依存が一切不要。
-2. **ROS 2ノード不要 (Zenoh-ROS2 Bridge直接連携):**
-   - ROS 2の標準形式（CDRシリアライズされた `sensor_msgs/msg/Joy`）をネイティブ出力。ロボット側は `zenoh-bridge-ros2dds` を通すだけで `/joy` トピックが自動出現します。
-3. **完全なホットプラグ対応:**
-   - コントローラーのケーブルが抜けてもクラッシュせず、切断中は安全な `axes=0` を出力しながら自動再接続を監視。
-4. **自動 E-Stop (緊急停止):**
-   - `Ctrl+C` や `SIGTERM` を検知すると、即座に停止用Joyパケットを連射して安全にシャットダウン。
+Production-grade, zero-latency teleoperation controller publisher for robotics and embedded systems.
+Streams CDR-serialized `sensor_msgs/msg/Joy` directly over **Zenoh 1.0** without requiring ROS 2 on the transmitter (e.g., Raspberry Pi).
 
 ---
 
-## 🚀 使い方
+## System Architecture
 
-### ビルド & 実行
-```bash
-cd zenoh_joy_rs
-
-# 開発実行
-make run
-
-# リリースビルド（スタンドアロン単一バイナリ作成）
-make release
+```
+[ Transmitter: Raspberry Pi / Linux ]
+  Gamepad (DualSense / Xbox / Custom HID)
+       |
+   (evdev) Non-blocking asynchronous input handling
+       |
+  [ zenoh_joy_rs ] (Native Rust Standalone Binary)
+       | -- Zero-Copy CDR serialization (Native ROS 2 sensor_msgs/Joy)
+       | -- Continuous hotplug detection and recovery
+       | -- Watchdog and E-Stop broadcast on shutdown
+       v (Zenoh Protocol 1.0 / Low-Latency UDP/TCP/QUIC)
+[ Receiver: Robot Main PC ]
+  [ zenoh-bridge-ros2dds ] (Standard daemon)
+       |
+  /joy (Native ROS 2 Topic available immediately)
 ```
 
-生成されたバイナリ: `target/release/zenoh_joy_rs` (RasPiにこの1ファイルだけコピーすればOK)
+- **Zero ROS 2 Footprint on Transmitter**: Builds to a single standalone binary (~8MB). No ROS 2 installation or Python runtime required on Raspberry Pi.
+- **Zero Custom Node on Receiver**: The robot runs standard `zenoh-bridge-ros2dds` daemon; no custom receiver nodes to maintain.
+- **Deterministic and Memory-Safe**: Pure Rust implementation with `tokio` and `evdev`. Zero garbage collection pauses and zero undefined behavior.
+- **Industrial Safety**:
+  - Hotplug tolerance: Automatically emits zero joy output when disconnected and resumes on reconnect.
+  - Emergency Stop: Emits emergency zero joy packets on `SIGINT` / `SIGTERM` before termination.
+
+---
+
+## Quick Start
+
+### 1. Build and Run
+
+```bash
+# Clone repository
+git clone git@github.com:lazytatzv/zenoh_joy_rs.git
+cd zenoh_joy_rs
+
+# Run in debug mode
+cargo run -- --config config/zenoh_joy.yaml
+
+# Build optimized release binary
+cargo build --release
+```
+
+The optimized static binary is placed at: `target/release/zenoh_joy_rs`
+
+---
+
+## Configuration (`config/zenoh_joy.yaml`)
+
+```yaml
+device:
+  name_keyword: ""             # Match gamepad by name (e.g. "Wireless Controller", "Xbox"). Leave empty for first available device.
+  reconnect_interval_ms: 1000  # Poll interval for reconnection when controller is disconnected
+
+network:
+  send_rate_hz: 100            # Streaming frequency in Hz
+  connect_endpoint: ""         # Empty for LAN Multicast auto-discovery, or e.g. "tcp/192.168.11.100:7447"
+
+ros:
+  topic_name: "joy"            # Target ROS 2 topic name (/joy)
+  frame_id: "teleop_joy"       # Header frame_id in sensor_msgs/msg/Joy
+```
+
+---
+
+## Production Deployment (Raspberry Pi)
+
+### 1. Gamepad Device Permissions (udev)
+```bash
+sudo cp udev/99-gamepad-teleop.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+### 2. Auto-Start Service (systemd)
+```bash
+sudo mkdir -p /usr/local/etc/zenoh_joy
+sudo cp target/release/zenoh_joy_rs /usr/local/bin/
+sudo cp config/zenoh_joy.yaml /usr/local/etc/zenoh_joy/
+sudo cp systemd/zenoh_joy.service /etc/systemd/system/
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now zenoh_joy.service
+```
+
+---
+
+## Robot Integration (ROS 2)
+
+On the robot PC, run the standard `zenoh-bridge-ros2dds`:
+
+```bash
+# Start Zenoh-ROS2 Bridge
+ros2 run zenoh_bridge_ros2dds zenoh_bridge_ros2dds
+
+# Verify published Joy topic
+ros2 topic echo /joy
+```
+
+---
+
+## Quality Assurance & Verification
+
+```bash
+# Fast syntax check
+make check
+
+# Lint with Clippy
+cargo clippy -- -D warnings
+
+# Run test suite
+cargo test
+```
+
+---
+
+## License
+MIT License. Free for open-source and commercial robotics applications.

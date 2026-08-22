@@ -2,11 +2,12 @@
 
 help:
 	@echo "=========================================================="
-	@echo " Zenoh Joy (Rust Edition) - Zero-Latency Teleop"
+	@echo " zenoh_joy_rs - Native Teleoperation Controller Publisher"
 	@echo "=========================================================="
 	@echo " make run       : Run in debug mode"
-	@echo " make release   : Build optimized standalone single binary"
+	@echo " make release   : Build optimized standalone binary"
 	@echo " make check     : Fast compile check"
+	@echo " make test      : Run test suite"
 	@echo " make clean     : Clean build artifacts"
 	@echo "=========================================================="
 
@@ -18,10 +19,12 @@ build:
 
 release:
 	cargo build --release
-	@echo "✔ Binary built at target/release/zenoh_joy_rs (Deployable single file!)"
 
 run:
 	cargo run -- --config config/zenoh_joy.yaml
+
+test:
+	cargo test
 
 clean:
 	cargo clean
