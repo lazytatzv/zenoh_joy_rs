@@ -165,14 +165,45 @@ cargo install zenoh-bridge-ros2dds
 
 ---
 
-### 2. Run the Bridge
+### 2. Run the Bridge (CLI or ROS 2 Launch)
+
+#### Method A: Direct CLI Execution
+```bash
+# Start Zenoh-ROS2 Bridge using the provided whitelist configuration
+zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5
+```
+
+#### Method B: Include in ROS 2 Launch File
+You can launch the bridge directly from your robot's launch stack:
+```bash
+ros2 launch examples/launch/zenoh_teleop.launch.py
+```
+
+Or embed it inside your own `.launch.py`:
+```python
+from launch_ros.actions import Node
+
+zenoh_bridge_node = Node(
+    package="zenoh_bridge_ros2dds",
+    executable="zenoh_bridge_ros2dds",
+    name="zenoh_bridge_teleop",
+    arguments=["-c", "/path/to/ros2_zenoh_bridge.json5"],
+    output="screen",
+    respawn=True,
+    respawn_delay=2.0
+)
+```
+
+---
+
+### 3. Verify Joy Topic
 
 ```bash
-# Start Zenoh-ROS2 Bridge (with optional whitelist config)
-zenoh-bridge-ros2dds -c examples/ros2_zenoh_bridge.json5
-
 # Verify published Joy topic in ROS 2
 ros2 topic echo /joy
+
+# Check streaming rate (e.g. 100 Hz)
+ros2 topic hz /joy
 ```
 
 ---
