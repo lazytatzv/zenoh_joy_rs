@@ -15,33 +15,31 @@ Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant 
 
 ### 1. Robot PC Setup (ROS 2)
 
-Add to your robot workspace `.repos` file and build:
-
 ```bash
 # Add to .repos, import and build
 vcs import src < your_robot.repos
 colcon build --packages-select zenoh_joy_rs
 source install/setup.bash
 
-# (Optional) Enable Bluetooth PAN Server for redundant link:
-curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --robot-pan
+# (Optional) Enable Bluetooth PAN Server:
+make robot-pan
 
 # Launch the teleop bridge
-ros2 launch zenoh_joy_rs zenoh_teleop.launch.py
+make launch
 ```
 
 ---
 
 ### 2. Raspberry Pi Setup (Transmitter)
 
-Plug in your PS5 DualSense / Gamepad via USB, then run the installer on Raspberry Pi:
+Plug in your PS5 DualSense / Gamepad via USB, then run on Raspberry Pi:
 
 ```bash
-# All-In-One automated deployment (Binary + udev + Bluetooth PAN + Systemd):
+# Remote one-liner install with Bluetooth PAN:
 curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash -s -- --bt-robot-mac <ROBOT_BT_MAC>
 
-# (Or standard Wi-Fi only install):
-# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.sh | sudo bash
+# Or if repository is cloned locally:
+# make raspi-install ROBOT_BT_MAC=<ROBOT_BT_MAC>
 ```
 
 ---
@@ -51,11 +49,7 @@ curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/install.
 On Robot PC:
 
 ```bash
-# Check Joy topic
-ros2 topic echo /joy
-
-# Check streaming rate (100 Hz)
-ros2 topic hz /joy
+make echo
 ```
 
 ---
