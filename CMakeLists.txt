@@ -7,16 +7,23 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 
-# Install Launch and Config files into standard ROS 2 share directory
+# Install Launch, Config, and Scripts into standard ROS 2 share directory
 install(DIRECTORY
   config
   examples
+  scripts
   DESTINATION share/${PROJECT_NAME}
 )
 
 install(DIRECTORY
   examples/launch
   DESTINATION share/${PROJECT_NAME}
+)
+
+# Install setup scripts with executable permissions
+install(PROGRAMS
+  scripts/setup_bt_pan.sh
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()

@@ -42,19 +42,7 @@ Directly streams raw CDR-serialized `sensor_msgs/msg/Joy` over **dual redundant 
 
 ### Step 1: Robot PC Setup (ROS 2)
 
-#### 1. Enable Bluetooth PAN Server (Optional for Redundant Link)
-Check Robot Bluetooth MAC address:
-```bash
-bluetoothctl show | grep "Controller"
-# Output example: Controller AA:BB:CC:DD:EE:FF (public) [default]
-```
-
-Run the automated server provisioner:
-```bash
-sudo bash scripts/setup_bt_pan.sh server
-```
-
-#### 2. Integrate into Robot ROS 2 Workspace via VCS
+#### 1. Integrate into Robot ROS 2 Workspace via VCS
 Add to your robot `.repos` file:
 ```yaml
 repositories:
@@ -71,6 +59,22 @@ vcs import src < your_robot.repos
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --packages-select zenoh_joy_rs
 source install/setup.bash
+```
+
+#### 2. Enable Bluetooth PAN Server (Optional for Redundant Link)
+Check Robot Bluetooth MAC address:
+```bash
+bluetoothctl show | grep "Controller"
+# Output example: Controller AA:BB:CC:DD:EE:FF (public) [default]
+```
+
+Run the automated server provisioner:
+```bash
+# Option A: After colcon build
+ros2 run zenoh_joy_rs setup_bt_pan.sh server
+
+# Option B: Run directly via curl (one-liner)
+# curl -sSL https://raw.githubusercontent.com/lazytatzv/zenoh_joy_rs/main/scripts/setup_bt_pan.sh | sudo bash -s -- server
 ```
 
 #### 3. Launch the Bridge
