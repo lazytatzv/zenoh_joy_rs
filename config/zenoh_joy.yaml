@@ -1,0 +1,15 @@
+# Zenoh Joy Rust Configuration
+device:
+  # Keyword match for controller name (case-insensitive). Leave empty to match any gamepad.
+  name_keyword: ""
+  reconnect_interval_ms: 1000
+
+network:
+  send_rate_hz: 100
+  # Zenoh Router / Robot End-point. Leave empty for LAN multicast peer discovery.
+  # Or specify e.g. "tcp/192.168.11.100:7447"
+  connect_endpoint: ""
+
+ros:
+  topic_name: "joy"
+  frame_id: "teleop_joy"

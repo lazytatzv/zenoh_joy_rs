@@ -1,0 +1,10 @@
+/home/tatsv/controller_test/zenoh_joy_rs/target/debug/deps/pnet_datalink-0b62cb6f9af780de.d: /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/lib.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/bindings/mod.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/bindings/linux.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/linux.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/unix_interfaces.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/dummy.rs
+
+/home/tatsv/controller_test/zenoh_joy_rs/target/debug/deps/libpnet_datalink-0b62cb6f9af780de.rmeta: /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/lib.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/bindings/mod.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/bindings/linux.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/linux.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/unix_interfaces.rs /home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/dummy.rs
+
+/home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/lib.rs:
+/home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/bindings/mod.rs:
+/home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/bindings/linux.rs:
+/home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/linux.rs:
+/home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/unix_interfaces.rs:
+/home/tatsv/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pnet_datalink-0.35.0/src/dummy.rs:
